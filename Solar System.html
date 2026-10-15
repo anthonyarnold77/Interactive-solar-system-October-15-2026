@@ -1,0 +1,303 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Solar System</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one-screen app. Left = orrery + planet buttons; right = description card (title, Read aloud, text, Previous/Next). Stacks on tall screens. Single dark night-sky theme, high contrast. */
+:root{
+  --void:#05070e;
+  --panel:#0d1222;
+  --line:#2a3352;
+  --ink:#f3f0e6;
+  --dim:#b4bad0;
+  --sun:#ffbf5e;
+  --display:"Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+html{font-size:clamp(13px, calc(8px + 1.05vmin), 20px)}
+body{background:var(--void);color:var(--ink);font-family:var(--body);margin:0;line-height:1.5;overflow:hidden}
+/* One-screen app: everything sized to the viewport, nothing scrolls except long text inside the card */
+.wrap{height:100%;box-sizing:border-box;max-width:1600px;margin:0 auto;padding-block:clamp(10px,2vmin,22px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:clamp(8px,1.6vmin,16px)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(1.6rem,4.2vmin,3rem);line-height:1;margin:0;flex:none}
+h1 em{color:var(--sun)}
+
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,34vw,480px);gap:clamp(10px,2vmin,20px)}
+.stage{display:flex;flex-direction:column;gap:clamp(8px,1.4vmin,12px);min-width:0;min-height:0}
+.sky{position:relative;flex:1;min-height:120px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--void)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+canvas.pointing{cursor:pointer}
+.pause{position:absolute;right:10px;bottom:10px}
+
+button{font:700 1rem/1 var(--body);color:var(--ink);background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:.65rem 1.1rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px}
+button:hover{border-color:var(--pc,var(--dim))}
+:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
+
+/* Planet buttons */
+.strip{flex:none;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:clamp(4px,1vmin,8px);list-style:none;margin:0;padding:0}
+.strip button{width:100%;flex-direction:column;gap:.4rem;padding:.6rem .15rem;border-radius:14px;font-size:.9rem;min-height:44px;justify-content:flex-end}
+.strip button[aria-current="true"]{border-color:var(--pc);background:#161d33}
+.orb{width:calc(var(--d) * 1px * var(--k,1));height:calc(var(--d) * 1px * var(--k,1));border-radius:50%;background:radial-gradient(circle at 35% 35%, #fff8 0, transparent 45%), var(--pc);flex:none}
+
+/* Description card */
+.card{background:var(--panel);border:2px solid var(--pc,var(--line));border-radius:18px;padding:clamp(14px,2.4vmin,24px);display:flex;flex-direction:column;gap:clamp(10px,1.8vmin,16px);min-width:0;min-height:0}
+.body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:clamp(8px,1.6vmin,14px);padding-right:4px}
+.listen{align-self:flex-start;background:var(--pc);border-color:var(--pc);color:#070a12;font-size:1.05rem;padding:.7rem 1.3rem;flex:none}
+.listen:hover{filter:brightness(1.1)}
+.bars{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.bars i{width:3px;height:5px;background:currentColor;border-radius:1px}
+.listen.on .bars i{animation:eq .9s ease-in-out infinite}
+.listen.on .bars i:nth-child(2){animation-delay:.15s}.listen.on .bars i:nth-child(3){animation-delay:.3s}
+@keyframes eq{0%,100%{height:4px}50%{height:14px}}
+.eyebrow{font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;color:var(--pc)}
+.card h2{font-family:var(--display);font-weight:400;font-size:clamp(2rem,5vmin,3.4rem);line-height:1;margin:.15rem 0 0}
+.head{display:flex;flex-direction:column;gap:clamp(8px,1.4vmin,12px);flex:none}
+.hook{font-size:1.15rem;font-weight:700;margin:0;text-wrap:balance}
+.card p{margin:0;font-size:1.05rem}
+.wonder{border-left:4px solid var(--pc);padding-left:12px;color:var(--dim)}
+.nav{flex:none;display:flex;justify-content:space-between;gap:10px;padding-top:clamp(10px,1.6vmin,14px);border-top:1px solid var(--line)}
+.nav button{flex:1;min-width:0}
+.nosound{font-size:.95rem;color:var(--dim)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Tall or narrow screens: stack the orrery above the card, still on one screen */
+@media (max-width:900px), (max-aspect-ratio:1/1){
+  .layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.1fr) minmax(0,1fr)}
+  .card h2{font-size:clamp(1.8rem,4.5vmin,2.6rem)}
+}
+@media (max-width:600px){
+  .strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .strip button{flex-direction:row;justify-content:center;padding:.5rem .3rem;font-size:.85rem}
+  .orb{--k:.6}
+  .pause{padding:.5rem .9rem}
+}
+@media (max-height:560px){
+  .strip button{flex-direction:row;padding:.4rem .2rem;font-size:.8rem}
+  .orb{--k:.5}
+}
+@media (prefers-reduced-motion:reduce){ .listen.on .bars i{animation:none;height:9px} }
+</style>
+
+<div class="wrap">
+  <h1><em>Solar</em> System</h1>
+
+  <div class="layout">
+    <div class="stage">
+      <div class="sky">
+        <canvas id="sky" aria-hidden="true"></canvas>
+        <p class="sr">An animation shows the eight planets circling the Sun. Use the planet buttons below it to explore each one.</p>
+        <button class="pause" id="pause">Pause</button>
+      </div>
+      <ul class="strip" id="planets" aria-label="Planets, in order from the Sun"></ul>
+    </div>
+
+    <section class="card" id="card" aria-labelledby="cName">
+      <div class="head">
+        <div>
+          <div class="eyebrow" id="cEyebrow"></div>
+          <h2 id="cName"></h2>
+        </div>
+        <button class="listen" id="listen"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span><span id="listenLabel">Read aloud</span></button>
+      </div>
+      <div class="body" tabindex="0" aria-label="Description">
+        <p class="hook" id="cHook"></p>
+        <p id="cText"></p>
+        <p class="wonder" id="cWonder"></p>
+      </div>
+      <div class="nav">
+        <button id="prev">← <span id="prevName"></span></button>
+        <button id="next"><span id="nextName"></span> →</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const TAU=Math.PI*2, DEG=Math.PI/180;
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+
+const PLANETS = [
+ {id:'mercury', name:'Mercury', type:'Rocky planet', color:'#c2b8ab', spot:'#7d756c', r:5, au:.387, P:87.969, L0:252.25, day:1407.6, tilt:.03,
+  hook:'A year here is shorter than a day.',
+  text:'Mercury is the smallest planet and the closest to the Sun. It races around the Sun in just 88 Earth days, but spins so slowly that one sunrise to the next takes 176 Earth days. With almost no air to hold heat, its days are hot enough to melt lead and its nights are colder than Antarctica.',
+  wonder:'If a year is shorter than a day, how would you plan a birthday on Mercury?'},
+ {id:'venus', name:'Venus', type:'Rocky planet', color:'#f0cf8f', spot:'#c9a865', r:8, au:.723, P:224.701, L0:181.98, day:-5832.5, tilt:177.4,
+  hook:'The hottest planet is not the closest one.',
+  text:'Venus is almost the same size as Earth, but its thick air of carbon dioxide traps heat like a blanket, making it even hotter than Mercury. The air presses down about 92 times harder than on Earth. Venus also spins backward, so there the Sun rises in the west.',
+  wonder:'Why might thick air make a planet hotter than one closer to the Sun?'},
+ {id:'earth', name:'Earth', type:'Rocky planet', color:'#5b9be6', spot:'#62b874', r:8.4, au:1, P:365.256, L0:100.46, day:23.934, tilt:23.4,
+  hook:'The only world we know with life.',
+  text:'Earth has liquid water on its surface, air we can breathe, and a magnetic field that shields us from the Sun\'s harsh particles. Our planet is tilted, and that tilt gives us seasons as we travel around the Sun once every 365 days.',
+  wonder:'What would happen to the seasons if Earth were not tilted at all?'},
+ {id:'mars', name:'Mars', type:'Rocky planet', color:'#e07448', spot:'#8e3d1f', r:6.2, au:1.524, P:686.98, L0:355.45, day:24.62, tilt:25.2,
+  hook:'Home of the tallest volcano in the solar system.',
+  text:'Mars looks red because its dust is full of rust. Olympus Mons, a volcano almost three times taller than Mount Everest, stands on its surface. Dry riverbeds show that water once flowed there, and robot rovers are searching for signs of tiny life from long ago.',
+  wonder:'If water once flowed on Mars, where could it have gone?'},
+ {id:'jupiter', name:'Jupiter', type:'Gas giant', color:'#dfb990', spot:'#c2532a', bands:['#c49a72','#efdcbe'], r:17, au:5.203, P:4332.59, L0:34.40, day:9.925, tilt:3.1,
+  hook:'A storm bigger than Earth has raged here for centuries.',
+  text:'Jupiter is the biggest planet; more than 1,300 Earths could fit inside it. It has no solid ground, only swirling clouds stretched into stripes by its fast spin. The Great Red Spot, the dot you can see turning across its face, is a giant storm.',
+  wonder:'How could a storm keep spinning for hundreds of years?'},
+ {id:'saturn', name:'Saturn', type:'Gas giant', color:'#ead59f', spot:'#c4a96a', bands:['#cdb57e','#f3e6c0'], r:14.5, au:9.537, P:10759.22, L0:49.94, day:10.56, tilt:26.7, rings:true,
+  hook:'A planet that could float in a giant bathtub.',
+  text:'Saturn\'s rings are made of billions of chunks of ice and rock, some as small as sand and some as big as a house. Saturn is so light for its size that it is less dense than water. Its largest moon, Titan, has lakes, but they are filled with liquid methane instead of water.',
+  wonder:'What do you think holds the rings in place around Saturn?'},
+ {id:'uranus', name:'Uranus', type:'Ice giant', color:'#a6e0e6', spot:'#6fb2bc', r:11, au:19.19, P:30688.5, L0:313.23, day:-17.24, tilt:97.8,
+  hook:'The planet that rolls around the Sun on its side.',
+  text:'Uranus is tipped over so far that its poles point almost toward the Sun. Each pole gets about 42 years of sunlight and then 42 years of darkness. Scientists think a huge crash long ago knocked it over.',
+  wonder:'What would a single season feel like if it lasted 21 years?'},
+ {id:'neptune', name:'Neptune', type:'Ice giant', color:'#6a8cf5', spot:'#2c4398', r:11, au:30.07, P:60182, L0:304.88, day:16.11, tilt:28.3,
+  hook:'Found with math before anyone saw it.',
+  text:'In 1846, astronomers noticed Uranus being tugged by something unseen. They used math to predict where it was, pointed a telescope there, and found Neptune. It has the fastest winds in the solar system, and sunlight there is about 900 times dimmer than on Earth.',
+  wonder:'What other hidden things could we find just by watching how objects move?'},
+];
+const byId = id => PLANETS.find(p=>p.id===id);
+let currentId='earth', previewId=null;
+
+/* ---------- Planet buttons ---------- */
+const strip=$('planets');
+strip.innerHTML = PLANETS.map((p,i)=>{ const d=Math.round(12+p.r*1.3);
+  return `<li><button data-id="${p.id}" style="--pc:${p.color}" aria-label="${p.name}, planet ${i+1} of 8" aria-controls="card"><span class="orb" style="--d:${d}" aria-hidden="true"></span><span>${p.name}</span></button></li>`; }).join('');
+const btns=[...strip.querySelectorAll('button')];
+btns.forEach((b,i)=>{
+  b.addEventListener('mouseenter', ()=>preview(b.dataset.id));
+  b.addEventListener('mouseleave', ()=>preview(null));
+  b.addEventListener('click', ()=>select(b.dataset.id));
+  b.addEventListener('keydown', e=>{
+    let j=null;
+    if (e.key==='ArrowRight') j=(i+1)%8; if (e.key==='ArrowLeft') j=(i+7)%8;
+    if (j!==null){ e.preventDefault(); btns[j].focus(); select(PLANETS[j].id); }
+  });
+});
+
+/* ---------- Card ---------- */
+function render(id){
+  const p=byId(id), i=PLANETS.indexOf(p);
+  $('card').style.setProperty('--pc', p.color);
+  $('cEyebrow').textContent=`Planet ${i+1} of 8 · ${p.type}`;
+  $('cName').textContent=p.name;
+  $('cHook').textContent=p.hook;
+  $('cText').textContent=p.text;
+  $('cWonder').textContent=p.wonder;
+  $('prevName').textContent=PLANETS[(i+7)%8].name;
+  $('nextName').textContent=PLANETS[(i+1)%8].name;
+  $('prev').setAttribute('aria-label', `Previous planet: ${PLANETS[(i+7)%8].name}`);
+  $('next').setAttribute('aria-label', `Next planet: ${PLANETS[(i+1)%8].name}`);
+  syncListen();
+}
+function select(id){
+  if (speakingId && speakingId!==id) stopSpeech();
+  currentId=id; previewId=null;
+  btns.forEach(b=>b.setAttribute('aria-current', b.dataset.id===id));
+  render(id);
+}
+let previewTimer=null;
+function preview(id){
+  clearTimeout(previewTimer);
+  if (speakingId) return; // don't swap the card while it is being read
+  if (id){ previewId=id; render(id); }
+  else previewTimer=setTimeout(()=>{ previewId=null; render(currentId); }, 500);
+}
+const step = d => { const i=PLANETS.findIndex(p=>p.id===currentId); select(PLANETS[(i+d+8)%8].id); };
+$('prev').addEventListener('click', ()=>step(-1));
+$('next').addEventListener('click', ()=>step(1));
+
+/* ---------- Read aloud ---------- */
+const synth=window.speechSynthesis;
+let voice=null, speakingId=null;
+function pickVoice(){ if(!synth) return; const vs=synth.getVoices(); for (const re of [/Google US English/i,/Samantha/i,/Natural/i,/Aria/i,/Jenny/i,/en-US/i,/^en/i]){ const v=vs.find(v=>re.test(v.name)||re.test(v.lang)); if(v){voice=v;return;} } }
+if (synth){ pickVoice(); synth.onvoiceschanged=pickVoice; }
+function speak(id){
+  synth.cancel(); const p=byId(id);
+  const u=new SpeechSynthesisUtterance(`${p.name}. ${p.hook} ${p.text} Something to wonder about: ${p.wonder}`);
+  if (voice) u.voice=voice; u.rate=.95;
+  u.onend=u.onerror=()=>{ if(speakingId===id){ speakingId=null; syncListen(); } };
+  speakingId=id; synth.speak(u); syncListen();
+}
+function stopSpeech(){ if(synth) synth.cancel(); speakingId=null; syncListen(); }
+function syncListen(){
+  const b=$('listen');
+  if (!synth){ b.outerHTML='<p class="nosound">Read-aloud is not available in this browser.</p>'; return; }
+  const shown=previewId||currentId, on=speakingId===shown;
+  b.classList.toggle('on', on); $('listenLabel').textContent = on ? 'Stop reading' : 'Read aloud';
+}
+if (synth) $('listen').addEventListener('click', ()=>{ const id=previewId||currentId; if (speakingId===id) stopSpeech(); else { if (previewId) select(previewId); speak(id); } });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape') stopSpeech(); });
+
+/* ---------- Orrery ---------- */
+const canvas=$('sky'), ctx=canvas.getContext('2d');
+const view={w:0,h:0,dpr:1,S:1}; let stars=null;
+let playing=!reduceMotion, simDays=0, realT=0;
+const START=new Date(); START.setHours(12,0,0,0);
+const d0=(START.getTime()-Date.UTC(2000,0,1,12))/864e5;
+function setPlaying(p){ playing=p; $('pause').textContent=p?'Pause':'Play'; $('pause').setAttribute('aria-label', p?'Pause the animation':'Play the animation'); }
+$('pause').addEventListener('click', ()=>setPlaying(!playing)); setPlaying(playing);
+function resize(){
+  const r=canvas.getBoundingClientRect(); view.dpr=Math.min(devicePixelRatio||1,2); view.w=r.width; view.h=r.height;
+  canvas.width=Math.round(r.width*view.dpr); canvas.height=Math.round(r.height*view.dpr);
+  view.S=(Math.min(view.w,view.h)/2-24)/Math.sqrt(30.07);
+  stars=document.createElement('canvas'); stars.width=canvas.width; stars.height=canvas.height;
+  const s=stars.getContext('2d');
+  for (let i=0;i<view.w*view.h/1800;i++){ s.fillStyle=`rgba(235,235,245,${.15+Math.random()*.5})`; s.fillRect(Math.random()*stars.width,Math.random()*stars.height,view.dpr,view.dpr); }
+}
+const K=()=>Math.max(.7,Math.min(1.25,Math.min(view.w,view.h)/540));
+const pos={};
+function drawPlanet(p,x,y,r,X,Y){
+  const sunAng=Math.atan2(Y-y,X-x);
+  ctx.save(); ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.clip();
+  ctx.fillStyle=p.color; ctx.fillRect(x-r,y-r,2*r,2*r);
+  const phase=(realT/4)*(24/Math.abs(p.day))*TAU*Math.sign(p.day);
+  ctx.translate(x,y); ctx.rotate(-p.tilt*DEG);
+  if (p.bands){ ctx.globalAlpha=.55; for(let i=-3;i<=3;i++){ ctx.fillStyle=p.bands[(i+10)%2]; ctx.fillRect(-r,i*r*.28-r*.07,2*r,r*.14);} ctx.globalAlpha=1; }
+  const c=Math.cos(phase), s=Math.sin(phase);
+  if (c>-.05){ ctx.globalAlpha=Math.min(1,c*1.6+.1); ctx.fillStyle=p.spot; const lat=p.id==='jupiter'?r*.32:p.id==='earth'?-r*.15:r*.1;
+    ctx.beginPath(); ctx.ellipse(s*r*.72,lat,Math.max(.8,r*.32*Math.max(c,.15)),r*.2,0,0,TAU); ctx.fill(); ctx.globalAlpha=1; }
+  ctx.setTransform(view.dpr,0,0,view.dpr,0,0);
+  const g=ctx.createLinearGradient(x+Math.cos(sunAng)*r,y+Math.sin(sunAng)*r,x-Math.cos(sunAng)*r,y-Math.sin(sunAng)*r);
+  g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.5,'rgba(0,0,0,.05)'); g.addColorStop(.65,'rgba(2,4,10,.55)'); g.addColorStop(1,'rgba(2,4,10,.75)');
+  ctx.fillStyle=g; ctx.fillRect(x-r,y-r,2*r,2*r); ctx.restore();
+}
+function rings(p,x,y,r,front){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(-p.tilt*DEG*.6); ctx.strokeStyle='rgba(230,210,160,.8)';
+  for (const [m,w,a] of [[1.55,r*.18,.55],[1.9,r*.28,.75],[2.2,r*.12,.4]]){ ctx.lineWidth=w; ctx.globalAlpha=a; ctx.beginPath(); ctx.ellipse(0,0,r*m,r*m*.32,0,front?0:Math.PI,front?Math.PI:TAU); ctx.stroke(); }
+  ctx.restore();
+}
+function draw(){
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#05070e'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  if (stars) ctx.drawImage(stars,0,0);
+  ctx.setTransform(view.dpr,0,0,view.dpr,0,0);
+  const X=view.w/2, Y=view.h/2, k=K(), active=previewId||currentId;
+  for (const p of PLANETS){ const on=p.id===active; ctx.strokeStyle=on?p.color:'rgba(160,175,215,.2)'; ctx.lineWidth=on?2:1; ctx.beginPath(); ctx.arc(X,Y,view.S*Math.sqrt(p.au),0,TAU); ctx.stroke(); }
+  const sr=16*k, glow=ctx.createRadialGradient(X,Y,sr*.4,X,Y,sr*4.5);
+  glow.addColorStop(0,'rgba(255,190,90,.5)'); glow.addColorStop(1,'rgba(255,120,40,0)'); ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(X,Y,sr*4.5,0,TAU); ctx.fill();
+  const sg=ctx.createRadialGradient(X-sr*.3,Y-sr*.3,1,X,Y,sr); sg.addColorStop(0,'#fff4d6'); sg.addColorStop(.6,'#ffc65a'); sg.addColorStop(1,'#ff8a2a');
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(X,Y,sr,0,TAU); ctx.fill();
+  ctx.font='700 13px "Atkinson Hyperlegible", system-ui, sans-serif';
+  for (const p of PLANETS){
+    const ang=(p.L0+360*(d0+simDays)/p.P)*DEG, R=view.S*Math.sqrt(p.au);
+    const x=X+R*Math.cos(ang), y=Y-R*Math.sin(ang), r=p.r*k*.75; pos[p.id]={x,y,r};
+    if (p.rings) rings(p,x,y,r,false); drawPlanet(p,x,y,r,X,Y); if (p.rings) rings(p,x,y,r,true);
+    const on=p.id===active;
+    if (on){ ctx.strokeStyle=p.color; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,r+7,0,TAU); ctx.stroke(); }
+    ctx.fillStyle=on?'#f3f0e6':'rgba(243,240,230,.72)'; ctx.fillText(p.name,x+r+(on?10:6),y-r-(on?4:2));
+  }
+}
+function hit(px,py){ let best=null,bd=1e9; for (const p of PLANETS){ const q=pos[p.id]; if(!q) continue; const d=Math.hypot(px-q.x,py-q.y); if (d<Math.max(q.r+10,20)&&d<bd){bd=d;best=p.id;} } return best; }
+let hovered=null;
+canvas.addEventListener('pointermove', e=>{ if (e.pointerType!=='mouse') return; const r=canvas.getBoundingClientRect(); const id=hit(e.clientX-r.left,e.clientY-r.top); canvas.classList.toggle('pointing',!!id); if (id!==hovered){ hovered=id; preview(id); } });
+canvas.addEventListener('pointerleave', ()=>{ if (hovered){ hovered=null; preview(null); } });
+canvas.addEventListener('click', e=>{ const r=canvas.getBoundingClientRect(); const id=hit(e.clientX-r.left,e.clientY-r.top); if (id) select(id); });
+
+let last=performance.now();
+function frame(now){ const dt=Math.min(.1,(now-last)/1000); last=now; if (playing){ simDays+=dt*10; realT+=dt; } draw(); requestAnimationFrame(frame); }
+new ResizeObserver(resize).observe(canvas);
+resize(); select(currentId); requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
